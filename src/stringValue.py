@@ -14,12 +14,30 @@
 # 13 = "Given..."
 # 14 = "To change"
 # 15 = "Contents (:q to exit) : "
+import os
 
-confLocation = "C:/workspace/bin"
-confFile = "configure"
-memoLocation = "C:/workspace/memoLocation"
-diaryLocation = "C:/workspace/diaryLocation"
-todoLocation = "C:/workspace/todoLocation"
+
+confLoc = os.environ['CCLI']
+
+confFile = "config"
+
+memoLocation = confLoc + "/memoLocation"
+diaryLocation = confLoc + "/diaryLocation"
+todoLocation = confLoc + "/todoLocation"
+
+def getMemoLocation():
+    readConf(confFile)
+    return memoLocation
+
+def getDiaryLocation():
+    readConf(confFile)
+    return diaryLocation
+
+def getTodoLocation():
+    readConf(confFile)
+    return todoLocation
+
+
 
 stringValue = [ "파일의 이름을 입력하십시오 : " # 0
     , "잘못된 파일 이름입니다." # 1
@@ -39,11 +57,13 @@ stringValue = [ "파일의 이름을 입력하십시오 : " # 0
     , "내용 (:q 로 취소) : " # 15
     , "파일을 삭제하시겠습니까?" # 16
     ]
+
 ccli = ["메모, 일기, 일정을 표시하는 CLI 환경의 도움말입니다."
     , "언어 설정을 하시려면 -l"
     , "db 설정을 하시려면 -d"
     , "alias 단축키 설정을 하시려면 -a를 누르세요."
     ]
+
 helpLang = [ "-c = 생성하기. [fileName]을 바로 입력하면 바로 생성 할 수 있습니다."
     , "-r = 읽기. [fileName] 을 바로 입력하면 바로 읽을수 있습니다."
     , "-u = 업데이트. [fileName] 을 바로 입력하면 바로 업데이트 할 수 있습니다."
@@ -52,29 +72,79 @@ helpLang = [ "-c = 생성하기. [fileName]을 바로 입력하면 바로 생성
     , "-t = 현재 컴퓨터의 시각."
     , "-rs = 아무거나 보기."
 ]
+
+def getStringValue():
+    return stringValue
+
+def getCCLI():
+    return ccli
+
+def getHelpLang():
+    return helpLang
+
 lang = "kr"
 
-def readConf(fileLocation, fileName):
-    lines = readFile(fileLocation, fileName + "conf")
-    lang = lines[0]
+def readConf(fileName):
+    fileName = confLoc + '/' + fileName
+    conf = "config"
+    lines = readFile(conf, fileName + "_conf")
+    lang = lines[0] # kr, en
     
-    lines = readFile(fileLocation, fileName + "db")
-    memoLocation = lines[0]
-    diaryLocation = lines[1]
-    todoLocation = lines[2]
+    conf = "db"
+    lines = readFile(conf, fileName + "_db")
+    memoLocation = lines[0] # memo`s location.
+    diaryLocation = lines[1] # diary`s location.
+    todoLocation = lines[2] # todo list`s location.
 
-    stringValue = readFile(fileLocation, fileName + "sv")
-    ccli = readFile(fileLocation, fileName + "cl")
-    helpLang = readFile(fileLocation, fileName + "hl")
+    conf = "sv"
+    stringValue = readFile(conf, fileName + "_sv")
+    
+    conf = "cl"
+    ccli = readFile(conf, fileName + "_cl")
+    
+    conf = "hl"
+    helpLang = readFile(conf, fileName + "_hl")
 
-def readFile(fileLocation, fileName):
-    f = open(fileLocation + "/" + fileName, "r")
+def readFile(conf, fileName):
+    # if file not exist, make files.
+    if not os.path.exists(fileName):
+        if conf == "str" or conf == "config":
+            f = open(fileName, "w")
+            f.write("kr\n")
+            f.close()
+        elif conf == "db":
+            f = open(fileName, "w")
+            f.write(memoLocation + '\n')
+            fileGen(memoLocation)
+            f.write(diaryLocation + '\n')
+            fileGen(diaryLocation)
+            f.write(todoLocation + '\n')
+            fileGen(todoLocation)
+            f.close()
+        else :
+            f = open(fileName, "w")
+            if conf == "sv":
+                for sv in stringValue:
+                    f.writelines(sv + '\n')
+            elif conf == "cl":
+                for cl in ccli:
+                    f.write(cl + '\n')
+            elif conf == "hl":
+                for hl in helpLang:
+                    f.writelines(hl + '\n')
+            f.close()
+    f = open(fileName, "r")
     lines = f.readlines()
     returnValue = []
 
     for l in lines:
         returnValue.append(l.split("\n")[0])
     f.close()
+
     return returnValue
 
-readConf(confLocation, confFile)
+def fileGen(fileName):
+    if not os.path.exists(fileName):
+        os.mkdir(fileName);
+
+readConf(confFile)
