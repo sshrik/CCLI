@@ -2,38 +2,49 @@ import os
 import time
 import random
 import stringValue
+from colorConsole import printc
+from colorConsole import printEnableColor
+import ccliCompiler as ccc
+import syntaxer as syt
 
 def doingWithARGV(argv, fileLocation, stringValue, inputType):
+    fileName = ""
+    if len(argv) > 3:
+        for al in range(2, len(argv)):
+            fileName = fileName + argv[al] + " "
+        argv[2] = fileName.strip()
+
     # fileLocation mean DB location.
     fileList = os.listdir(fileLocation)
     if len(argv) == 1:
         helpMode()
     elif argv[1] == "-c": # Creates
-        if len(argv) == 3:
+        if len(argv) > 3:
             create(fileLocation, fileList, stringValue, inputType, file=argv[2])
         else:
             create(fileLocation, fileList, stringValue, inputType)
     elif argv[1] == "-s": # Show
         show(fileLocation, stringValue)
     elif argv[1] == "-r": # Read
-        if len(argv) == 3:
+        if len(argv) > 3:
             read(fileLocation, fileList, stringValue, inputType, file=argv[2], no=True)
         else:
             read(fileLocation, fileList, stringValue, inputType, no=True)
     elif argv[1] == "-u": # Update
-        if len(argv) == 3:
+        if len(argv) > 3:
             update(fileLocation, fileList, stringValue, inputType, file=argv[2])
         else:
             update(fileLocation, fileList, stringValue, inputType)
     elif argv[1] == "-d":
-        if len(argv) == 3:
+        if len(argv) > 3:
             delete(fileLocation, fileList, stringValue, file=argv[2])
         else:
-            delete(fileLocation, stringValue, fileList)
+            delete(fileLocation, fileList, stringValue)
     elif argv[1] == "-h":
         helpMode()
     elif argv[1] == "-t":
-        print("Now time : " + getTime())
+        printc("G", "Now time : ")
+        printc("BL", getTime(), enter=True)
     elif argv[1] == "-rs":
         fileName = fileList[random.randint(0, len(fileList) - 1)]
         read(fileLocation, fileList, stringValue, inputType, file=fileName, no=True)
@@ -45,16 +56,28 @@ def create(fileLocation, fileList, stringValue, inputType, file=-1):
     header = getHeader(inputType, fileName, stringValue)
 
     buffer = ""
-    memoContents = []
+    contents = []
+    lineNum = 0
+    
+    # print usable Color.
+    printEnableColor()
+    
+    print() # Enter
+
+    contents.append("<body>")
     while True:
         buffer = input(stringValue[15])
         if buffer == ":q": # Stop write and add it to file.
             break
         else:
-            memoContents.append(buffer)
-    toWrite = header + memoContents
+            contents.append("\t<" + str(lineNum) + ">\n" + \
+                    "\t\t"+ buffer + "\n\t</" + str(lineNum) + ">")
+            lineNum += 1
+    contents.append("</body>")
+    contents.append("</ccli>")
+    toWrite = header + contents
     writeFile(fileLocation, fileName, toWrite)
-
+    
 def update(fileLocation, fileList, stringValue, inputType, file=-1):
     fileName = getFileName(fileList, stringValue, file=file, no=True)
     print(stringValue[13])
@@ -79,47 +102,48 @@ def delete(fileLocation, fileList, stringValue, file=-1, go=False):
 
 def read(fileLocation, fileList, stringValue, inputType, file=-1, no=False):
     fileName = getFileName(fileList, stringValue, file=file, no=no)
-    lines = getFileContents(fileLocation, fileName)
-
+    header = ccc.getHeader(fileLocation + "/" + fileName)
+    contents = ccc.getFileContents(fileLocation + "/" + fileName)
+    
     if inputType == "memo":
-        print(stringValue[8] + lines[0])
-        print(stringValue[9] + lines[1])
-        contents = lines[2:-1]
+        printc("W", stringValue[8] + header["title"], enter=True)
+        printc("W", stringValue[9] + header["date"], enter=True)
     elif inputType == "diary":
-        print(stringValue[8] + lines[0])
-        print(stringValue[9] + lines[1])
-        print(stringValue[10] + lines[2])
-        contents = lines[3:-1]
+        printc("W", stringValue[8] + header["title"], enter=True)
+        printc("W", stringValue[9] + header["date"], enter=True)
+        printc("W", stringValue[10] + header["doing"], enter=True)
     elif inputType == "todo":
-        print(stringValue[8] + lines[0])
-        print(stringValue[9] + lines[1])
-        contents = lines[2:-1]
+        printc("W", stringValue[8] + header["title"], enter=True)
+        printc("W", stringValue[9] + header["date"], enter=True)
 
-    for c in contents:
-        print(stringValue[11] + c)
+    print(stringValue[11])
+
+    for num in range(0,len(contents)):
+        for c in contents[str(num)].keys():
+            color = c
+        printc(c, str(contents[str(num)][color]), enter=True)
 
 def show(fileLocation, stringValue):
     print(stringValue[3])
-    print(stringValue[7])
+    printc("W", stringValue[7], enter=True)
     titleList, dateList = getFileInfor(fileLocation)
     for l in range(0, len(titleList)):
-        print(dateList[l] + "\t" + titleList[l])
-    print(stringValue[7])
-    
+        printc("G", dateList[l] + "\t\t")
+        printc("BL", titleList[l], enter=True)
+    printc("W",stringValue[7], enter=True)
+
 def getFileInfor(location):
     '''
-    Get file information of date and name.
-    Return 2 list of date and name.
+    Get file information with it`s create days.
     '''
     fileList = os.listdir(location)
     dateList = []
     titleList = []
 
-    for files in fileList:
-        f = open(location + "/" + files)
-        titleList.append(f.readline().split("\n")[0])
-        dateList.append(f.readline().split("\n")[0])
-    # File all have name - date format at first 2 lines.
+    for files in fileList :
+        header = ccc.getHeader(location + "/" + files)
+        dateList.append(header["date"])
+        titleList.append(header["title"])
 
     for t1 in range(0, len(titleList)):
         for t2 in range(t1, len(titleList)):
@@ -136,15 +160,21 @@ def getFileInfor(location):
 
 def getHeader(inputType, fileName, stringValue):
     header = []
-    header.append(fileName)
+    header.append("<ccli>")
+    header.append("<head>")
+    header.append("\t<title>" + fileName + "</title>")
     if inputType == "memo":
-        header.append(getTime()) # date
+        header.append("\t<date>" + getTime() + "</date>") # date
     elif inputType == "diary":
-        header.append(input(stringValue[5])) # date
-        header.append(input(stringValue[6])) # did
+        header.append("\t<date>" + input(stringValue[5]) + \
+                "</date>") # date
+        header.append("\t<doing>" + input(stringValue[6]) + \
+                "</doing>") # did
     elif inputType == "todo":
-        header.append(input(stringValue[5])) # date
-    return header
+        header.append("\t<date>" + input(stringValue[5]) + 
+                "</date>") # date
+    header.append("</head>")
+    return header 
 
 def getTime():
     now = time.localtime()
@@ -160,12 +190,12 @@ def getFileName(fileList, stringValue, file=-1, no=False):
         fileName = file
     if no:
         # If no flag is setted...
-        while not isExist(fileList, fileName):
+        while not isExist(fileList, fileName): # select file is exist.
             print(fileName + stringValue[1])
             fileName = input(stringValue[0])
     else:
         # if no flag is not setted...
-        while isExist(fileList, fileName):
+        while isExist(fileList, fileName): # select file does not exist.
             print(fileName + stringValue[1])
             fileName = input(stringValue[0])
 
@@ -182,10 +212,4 @@ def writeFile(fileLocation, fileName, lines):
     f.close()
 
 def getFileContents(fileLocation, fileName):
-    f = open(fileLocation + "/" + fileName, "r")
-    lines = f.readlines()
-    returnValue = []
-    for l in lines:
-        returnValue.append(l.split("\n")[0])
-    f.close()
-    return returnValue
+    return ccc.getFileContents(fileLocation + "/" + fileName)
