@@ -55,23 +55,25 @@ def create(fileLocation, fileList, stringValue, inputType, file=-1):
     fileName = getFileName(fileList, stringValue, file=file)
     header = getHeader(inputType, fileName, stringValue)
 
+    nowColor = "W"
     buffer = ""
     contents = []
     lineNum = 0
-    
-    # print usable Color.
-    printEnableColor()
-    
-    print() # Enter
 
     contents.append("<body>")
     while True:
         buffer = input(stringValue[15])
         if buffer == ":q": # Stop write and add it to file.
             break
+        elif buffer == ":c": # Change Color
+            printEnableColor()
+            print() # Enter
+            buffer = input("색깔 선택 : ")
+            nowColor = buffer
         else:
             contents.append("\t<" + str(lineNum) + ">\n" + \
-                    "\t\t"+ buffer + "\n\t</" + str(lineNum) + ">")
+                    "\t\t" + "<" + nowColor +">" + buffer + "</" + nowColor + ">" \
+                    + "\n\t</" + str(lineNum) + ">")
             lineNum += 1
     contents.append("</body>")
     contents.append("</ccli>")
